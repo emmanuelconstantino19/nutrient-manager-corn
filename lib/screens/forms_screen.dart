@@ -81,8 +81,14 @@ class _FormsScreenState extends State<FormsScreen> {
                                     setState(() {
                                       if(province != newValue){
                                         province = newValue;
+
+                                        //remove value from selected municipality
                                         municipality = null;
+
+                                        //clear barangays and remove value from selected barangay
                                         brgy = null;
+                                        brgys.clear();
+
                                         if(province == "Albay"){
                                           municipalities = ['Ligao City'];
                                         }else if(province == "Bukidnon"){
@@ -381,12 +387,12 @@ class _FormsScreenState extends State<FormsScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(builder: (context) => CalculateScreen(
-                          province:province,
-                          municipality:municipality,
-                          brgy:brgy,
-                          growingSeason:growingSeason,
+                          province:province.toLowerCase(),
+                          municipality:municipality.toLowerCase(),
+                          brgy:brgy.toLowerCase(),
+                          growingSeason:growingSeason.toLowerCase(),
                           area:double.parse(_areaController.text),
-                          variety: variety,
+                          variety: variety.toLowerCase(),
                           targetYield: double.parse(_tyController.text),
                           fertilizerCombination: fertilizerCombination.split(',')
                         )),

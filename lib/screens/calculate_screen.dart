@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
+import 'package:progress_dialog/progress_dialog.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 
+
+//Start of constant values
 const prices={
   "complete": 1211.84,
   "urea": 1230.57,
@@ -19,6 +24,170 @@ const fTypeRate = {
   "urea": [.46, 0, 0],
   "ammosulphate": [.21,0,0]
 };
+
+const nutrientRemoval = {
+  "albay" : { // nutrient removal values for ALBAY
+    "opv" : {
+      "n" : 16,
+      "p" : 2.8,
+      "k" : 4.0
+    },
+    "hybrid" : {
+      "n" : 15.6,
+      "p" : 2.9,
+      "k" : 3.8
+    }
+  },
+
+  "bukidnon" : {  // nutrient removal values for BUKIDNON
+    "opv" : {
+      "n" : 16,
+      "p" : 2.8,
+      "k" : 4.0
+    },
+    "hybrid" : {
+      "n" : 15.6,
+      "p" : 2.9,
+      "k" : 3.8
+    }
+  },
+
+  "cebu" : {  // nutrient removal values for CEBU
+    "opv" : {
+      "n" : 16,
+      "p" : 2.8,
+      "k" : 4.0
+    },
+    "hybrid" : {
+      "n" : 15.6,
+      "p" : 2.9,
+      "k" : 3.8
+    }
+  },
+
+  "iloilo" : { // nutrient removal values for ILOILO
+    "opv" : {
+      "n" : 16,
+      "p" : 2.8,
+      "k" : 4.0
+    },
+    "hybrid" : {
+      "n" : 15.6,
+      "p" : 2.9,
+      "k" : 3.8
+    }
+  },
+
+  "isabela" : { // nutrient removal values for ISABELA
+    "opv" : {
+      "n" : 16,
+      "p" : 2.8,
+      "k" : 4.0
+    },
+    "hybrid" : {
+      "n" : 15.6,
+      "p" : 2.9,
+      "k" : 3.8
+    }
+  },
+
+  "nueva ecija" : { // nutrient removal values for NUEVA ECIJA
+    "opv" : {
+      "n" : 16,
+      "p" : 2.8,
+      "k" : 4.0
+    },
+    "hybrid" : {
+      "n" : 15.6,
+      "p" : 2.9,
+      "k" : 3.8
+    }
+  },
+
+};
+
+
+const fertilizerRecovery = {
+  "albay" : { // fertilizer recovery values for ALBAY
+    "opv" : {
+      "n" : 0.5,
+      "p" : 0.3,
+      "k" : 0.5
+    },
+    "hybrid" : {
+      "n" : 0.5,
+      "p" : 0.3,
+      "k" : 0.5
+    }
+  },
+
+  "bukidnon" : {  // fertilizer recovery values for BUKIDNON
+    "opv" : {
+      "n" : 0.5,
+      "p" : 0.3,
+      "k" : 0.5
+    },
+    "hybrid" : {
+      "n" : 0.5,
+      "p" : 0.3,
+      "k" : 0.5
+    }
+  },
+
+  "cebu" : {  // fertilizer recovery values for CEBU
+    "opv" : {
+      "n" : 0.5,
+      "p" : 0.3,
+      "k" : 0.5
+    },
+    "hybrid" : {
+      "n" : 0.5,
+      "p" : 0.3,
+      "k" : 0.5
+    }
+  },
+
+  "iloilo" : { // fertilizer recovery values for ILOILO
+    "opv" : {
+      "n" : 0.5,
+      "p" : 0.3,
+      "k" : 0.5
+    },
+    "hybrid" : {
+      "n" : 0.5,
+      "p" : 0.3,
+      "k" : 0.5
+    }
+  },
+
+  "isabela" : { // fertilizer recovery values for ISABELA
+    "opv" : {
+      "n" : 0.5,
+      "p" : 0.3,
+      "k" : 0.5
+    },
+    "hybrid" : {
+      "n" : 0.5,
+      "p" : 0.3,
+      "k" : 0.5
+    }
+  },
+
+  "nueva ecija" : { // fertilizer recovery values for NUEVA ECIJA
+    "opv" : {
+      "n" : 0.5,
+      "p" : 0.3,
+      "k" : 0.5
+    },
+    "hybrid" : {
+      "n" : 0.5,
+      "p" : 0.3,
+      "k" : 0.5
+    }
+  },
+};
+//End of constant values
+
 
 class CalculateScreen extends StatefulWidget {
   final String province, municipality, brgy, growingSeason, variety;
@@ -127,6 +296,92 @@ class _CalculateScreenState extends State<CalculateScreen> {
         choices.add(widget.fertilizerCombination[i]);
     }
     return choices;
+  }
+
+
+  //Gets yield of indigenous supply from google sheets
+  //In future changes, try to add municipality and brgy if needed
+  Future<double> getYieldOfIndigenousSupply() async {
+    double yieldSupply;
+
+    final ProgressDialog pr = ProgressDialog(context, isDismissible: false);
+
+    pr.style(
+        message: 'Processing values'
+    );
+
+    await pr.show(); //displays 'processing values' pop-up
+
+    var place_index = {
+      'albay' : 9,
+      'bukidnon' : 16,
+      'cebu' : 23,
+      'iloilo' : 30,
+      'isabela' : 37,
+      'nueva ecija' : 44,
+    };
+
+    var growingSeasonIndex = (widget.growingSeason == "dry") ? 0 : 2;
+
+    var response =
+      await http.get('https://spreadsheets.google.com/feeds/cells/17gN4VZB7jIh5MX9uXISDS9IIl_vvRZr2WfB6r9iulEM/od6/public/basic?alt=json');
+
+    if (response.statusCode == 200) {
+      // If the server did return a 200 OK response,
+      // then parse the JSON.
+      var gsheets = json.decode(response.body);
+      //get yield of indigenous supply in this line of code
+      yieldSupply = double.parse(gsheets['feed']['entry'][place_index[widget.province] + growingSeasonIndex]['content']['\$t']);
+
+    } else {
+      // If the server did not return a 200 OK response,
+      // then throw an exception.
+      throw Exception('Failed to load indigenous supply');
+    }
+
+    await pr.hide(); //hides 'processing values' pop-up
+
+    return yieldSupply;
+  }
+
+  //computes the FRR (with declared farmer's area)
+  computeFRRWithArea() async {
+    //Get yield of indigenous supply
+    //no parameters because province is already accessible inside the function.
+    var yieldSupply = await getYieldOfIndigenousSupply();
+
+    // Computes FRR with area already
+    // (((targetYield-yieldSupply)*nutrientRemoval)/fertilizer)*area
+    var frr = {
+      'n' : (((widget.targetYield-yieldSupply)* nutrientRemoval[widget.province][widget.variety]['n'])/fertilizerRecovery[widget.province][widget.variety]['n'])*widget.area,
+      'p' : (((widget.targetYield-yieldSupply)* nutrientRemoval[widget.province][widget.variety]['p'])/fertilizerRecovery[widget.province][widget.variety]['p'])*widget.area,
+      'k' : (((widget.targetYield-yieldSupply)* nutrientRemoval[widget.province][widget.variety]['k'])/fertilizerRecovery[widget.province][widget.variety]['k'])*widget.area
+    };
+
+    return frr;
+  }
+
+  computeAMF(frr){
+    var amf = {};
+
+
+    // computes for AMF for 1st fertilizer type (Either Complete or Muriate of Potash)
+    // divides value of FRR for K nutrient to last value of fertilizer type
+    // this is because both complete and muriate of potash have last values
+    // 14-14-14 and 0-0-60
+    amf[widget.fertilizerCombination[0]] = frr['k']/fTypeRate[widget.fertilizerCombination[0]][2];
+
+    //computes for AMF for 2nd fertilizer type (Either Solophos or Ammophosphate)
+    //p1 is the checker if the 1st fertilizer type has P
+    int p1 = (fTypeRate[widget.fertilizerCombination[0]][1] == 0) ? 0 : 1;
+    amf[widget.fertilizerCombination[1]] = (frr['p'] - (frr['k'] * p1)) / fTypeRate[widget.fertilizerCombination[1]][1];
+
+    //computes for AMF for 3rd fertilizer type (Either Urea or Ammosulphate)
+    //n1 is the checker if the 1st fertilizer type has N
+    int n1 = (fTypeRate[widget.fertilizerCombination[0]][0] == 0) ? 0 : 1;
+    amf[widget.fertilizerCombination[2]] = ((frr['n']-(frr['k']*n1)) - (amf[widget.fertilizerCombination[1]]*fTypeRate[widget.fertilizerCombination[1]][0]))/fTypeRate[widget.fertilizerCombination[2]][0] ;
+
+    return amf;
   }
 
 
@@ -258,7 +513,7 @@ class _CalculateScreenState extends State<CalculateScreen> {
                                           chosenN = newValue;
                                         });
                                       },
-                                      items: getChoices(0)
+                                      items: getChoices(0) //get choices for N
                                           .map<DropdownMenuItem<String>>((String value) {
                                         return DropdownMenuItem<String>(
                                           value: value,
@@ -280,7 +535,7 @@ class _CalculateScreenState extends State<CalculateScreen> {
                                           chosenP = newValue;
                                         });
                                       },
-                                      items: getChoices(1)
+                                      items: getChoices(1) //get choices for P
                                           .map<DropdownMenuItem<String>>((String value) {
                                         return DropdownMenuItem<String>(
                                           value: value,
@@ -302,7 +557,7 @@ class _CalculateScreenState extends State<CalculateScreen> {
                                           chosenK = newValue;
                                         });
                                       },
-                                      items: getChoices(2)
+                                      items: getChoices(2) //get choices for K
                                           .map<DropdownMenuItem<String>>((String value) {
                                         return DropdownMenuItem<String>(
                                           value: value,
@@ -327,10 +582,25 @@ class _CalculateScreenState extends State<CalculateScreen> {
                   child: RaisedButton(
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(30.0),
-                      //side: BorderSide(color: Colors.lightGreen[700])
                     ),
                     onPressed: () async {
                       if(_formKey.currentState.validate()){
+
+                        //Calculate the FRR w/ declared farmer's area
+                        //sample format frr = {'n':999, 'p':999, 'k':999}
+                        var frr = await computeFRRWithArea();
+
+                        //Calculate Amount of Fertilizer(AMF) per KG (wala pa yung per bag dito)
+                        //sample format amf = {'complete':999, 'solophos':999, 'urea':999}
+                        var amf = computeAMF(frr);
+
+                        print(frr);
+                        print(amf);
+
+                        //Things to do: Get data for nutrient cost analysis
+                        //Check Yield-curve equation excel file
+                        //Create SSNM Rates page
+
                         //temporarily commented out
 //                      var nCost = await computeElement(chosenN,'n',0);
 //                      var pCost = await computeElement(chosenP,'p',1);
