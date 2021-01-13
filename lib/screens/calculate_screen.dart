@@ -4,15 +4,17 @@ import 'package:intl/intl.dart';
 import 'package:progress_dialog/progress_dialog.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:math';
+import 'package:nutrient_manager_corn_new/screens/ssnm_rates_screen.dart';
 
 
 //Start of constant values
 const prices={
-  "complete": 1211.84,
-  "urea": 1230.57,
-  "ammosulphate": 886.58,
-  "ammophosphate": 1009.09,
-  "muriateOfPotash": 1262.50,
+  "complete": 1211.83544303797,
+  "urea": 1230.57471264368,
+  "ammosulphate": 886.578947368421,
+  "ammophosphate": 1009.09090909091,
+  "muriateOfPotash": 1262.5,
   "solophos": 980.00,
 };
 
@@ -345,11 +347,7 @@ class _CalculateScreenState extends State<CalculateScreen> {
   }
 
   //computes the FRR (with declared farmer's area)
-  computeFRRWithArea() async {
-    //Get yield of indigenous supply
-    //no parameters because province is already accessible inside the function.
-    var yieldSupply = await getYieldOfIndigenousSupply();
-
+  computeFRRWithArea(yieldSupply) {
     // Computes FRR with area already
     // (((targetYield-yieldSupply)*nutrientRemoval)/fertilizer)*area
     var frr = {
@@ -384,6 +382,81 @@ class _CalculateScreenState extends State<CalculateScreen> {
     return amf;
   }
 
+  computeYieldCurveEquation(yieldSupply,frrNutrient,chosen,nutrientIndex,price) async {
+
+    //compute for a, b, c;
+      double a = (widget.targetYield-yieldSupply)/pow(frrNutrient,2);
+      double b = (widget.targetYield+(pow(frrNutrient,2)*a)-yieldSupply)/frrNutrient;
+      double c = yieldSupply;
+
+      var y,z,economicalData,econ_diff,largest_diff,econ_cost,econ_frr;
+      for(var x = 1; x<=397; x++){
+        y = -(a)*pow(x,2)+b*x+c;
+        z = x*(price/(fTypeRate[chosen][nutrientIndex]*50));
+        economicalData = ((widget.targetYield-yieldSupply)/(frrNutrient-0)) * x + yieldSupply;
+        econ_diff = y-economicalData;
+
+        if(x==1){
+          largest_diff = econ_diff;
+          econ_cost = z;
+          econ_frr = x;
+        }
+        if(largest_diff < econ_diff){
+          largest_diff = econ_diff;
+          econ_cost = z;
+          econ_frr = x;
+        }
+      }
+
+      return [econ_cost,econ_frr];
+  }
+
+  getEconomicCost(yieldSupply,frr,chosenN,chosenP,chosenK,prices) async {
+    var econN = await computeYieldCurveEquation(yieldSupply, frr['n'], chosenN,0, prices['n']);
+    var econP = await computeYieldCurveEquation(yieldSupply, frr['p'], chosenP,1, prices['p']);
+    var econK = await computeYieldCurveEquation(yieldSupply, frr['k'], chosenK,2, prices['k']);
+
+    var econ_cost = {
+      'n' : econN[0],
+      'p' : econP[0],
+      'k' : econK[0],
+    };
+
+    var econ_frr = {
+      'n' : econN[1],
+      'p' : econP[1],
+      'k' : econK[1],
+    };
+
+    return [econ_frr,econ_cost];
+  }
+
+  getTargetCost(frr,chosenN,chosenP,chosenK, prices) async {
+
+    var costN = frr['n'].round()*(prices['n']/(fTypeRate[chosenN][0]*50));
+    var costP = frr['p'].round()*(prices['p']/(fTypeRate[chosenP][1]*50));
+    var costK = frr['k'].round()*(prices['k']/(fTypeRate[chosenK][2]*50));
+
+    return {'n': costN, 'p': costP, 'k': costK};
+  }
+
+  getCost(chosen) async{
+    var price; //depends on the chosen variable
+    if(chosen == "complete"){
+      price = await cost1;
+    }else if(chosen == "urea"){
+      price = await cost2;
+    }else if(chosen == "ammosulphate"){
+      price = await cost3;
+    }else if(chosen == "ammophosphate"){
+      price = await cost4;
+    }else if(chosen == "muriateOfPotash"){
+      price = await cost5;
+    }else if(chosen == "solophos"){
+      price = await cost6;
+    }
+    return price;
+  }
 
 
   @override
@@ -586,38 +659,54 @@ class _CalculateScreenState extends State<CalculateScreen> {
                     onPressed: () async {
                       if(_formKey.currentState.validate()){
 
+                        //Get yield of indigenous supply
+                        //no parameters because province is already accessible inside the function.
+                        var yieldSupply = await getYieldOfIndigenousSupply();
+
                         //Calculate the FRR w/ declared farmer's area
                         //sample format frr = {'n':999, 'p':999, 'k':999}
-                        var frr = await computeFRRWithArea();
+                        var targetFRR = computeFRRWithArea(yieldSupply);
 
-                        //Calculate Amount of Fertilizer(AMF) per KG (wala pa yung per bag dito)
+                        //Calculate Amount of Fertilizer(AMF) per KG (wala pa yung per bag dito) for farmer's area
                         //sample format amf = {'complete':999, 'solophos':999, 'urea':999}
-                        var amf = computeAMF(frr);
+                        var targetAMF = computeAMF(targetFRR);
 
-                        print(frr);
-                        print(amf);
+                        var prices = {
+                          'n': await getCost(chosenN),
+                          'p': await getCost(chosenP),
+                          'k': await getCost(chosenK)
+                        };
 
-                        //Things to do: Get data for nutrient cost analysis
-                        //Check Yield-curve equation excel file
-                        //Create SSNM Rates page
+                        //Get target nutrient cost analysis
+                        //sample format cost = {'n':123, 'p':123, 'k':123}
+                        var targetCost = await getTargetCost(targetFRR,chosenN,chosenP,chosenK,prices);
 
-                        //temporarily commented out
-//                      var nCost = await computeElement(chosenN,'n',0);
-//                      var pCost = await computeElement(chosenP,'p',1);
-//                      var kCost = await computeElement(chosenK,'k',2);
+                        //compiled data for easier transfer in parameters
+                        var targetData = {
+                          'frr':targetFRR,
+                          'amf': targetAMF,
+                          'cost': targetCost
+                        };
 
-//                      var AMF_econ = computeAMFEcon(nCost[2],pCost[2],kCost[2]);
+                        //Get economic yield FRR and nutrient cost analysis
+                        var econFRRandCost = await getEconomicCost(yieldSupply,targetFRR,chosenN,chosenP,chosenK,prices);
+                        var econFRR = econFRRandCost[0];
+                        var econCost = econFRRandCost[1];
+                        //Get AMF for economic yield
+                        var econAMF = computeAMF(econFRR);
 
-//                      Navigator.push(
-//                        context,
-//                        MaterialPageRoute(builder: (context) => resultsPage(nCost:nCost, pCost:pCost, kCost:kCost, AMF: widget.AMF, AMF_econ: AMF_econ, caseCH: widget.caseCH, frr_target: widget.frr_target, frr_econ: [nCost[2],pCost[2],kCost[2]], area:widget.area)),
-//                      );
+                        var econData = {
+                          'frr':econFRR,
+                          'amf': econAMF,
+                          'cost': econCost
+                        };
+                        print(econData);
+                        print(targetData);
 
-                        //This code is commented out
-//                    FocusScopeNode currentFocus = FocusScope.of(context);
-//                    if (!currentFocus.hasPrimaryFocus) {
-//                      currentFocus.unfocus();
-//                    }
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => SSNMRatesScreen(targetData:targetData,econData:econData,area:widget.area,fertilizerCombination:widget.fertilizerCombination,prices:prices)),
+                      );
                       }
                     },
                     textColor: Colors.white,
