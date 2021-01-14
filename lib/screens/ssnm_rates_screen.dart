@@ -1,18 +1,25 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:tabbar/tabbar.dart';
+import 'package:nutrient_manager_corn_new/screens/cost_profit_screen.dart';
 
 class SSNMRatesScreen extends StatefulWidget {
   final Map<dynamic,dynamic> targetData, econData, prices;
-  final double area;
+  final double area, targetYield, yieldSupply;
   final List<String> fertilizerCombination;
+  final String province, variety;
 
   SSNMRatesScreen({Key key,
     @required this.targetData,
     @required this.econData,
     @required this.area,
     @required this.fertilizerCombination,
-    @required this.prices});
+    @required this.prices,
+    @required this.targetYield,
+    @required this.yieldSupply,
+    @required this.province,
+    @required this.variety
+  });
 
   @override
   _SSNMRatesScreenState createState() => _SSNMRatesScreenState();
@@ -37,7 +44,43 @@ class _SSNMRatesScreenState extends State<SSNMRatesScreen> {
               padding: EdgeInsets.only(right: 20.0),
               child: GestureDetector(
                 onTap: () {
-                  print("View summary");
+                  showDialog(
+                    context: context,
+                    builder: (BuildContext context) {
+                      return AlertDialog(
+                        content: Text("Would you like to compare the target yield to other values?"),
+                        actions: [
+                          FlatButton(
+                            child: Text("Yes"),
+                            onPressed:  () {
+                              Navigator.of(context).pop();
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) =>
+                                    CostProfitScreen(
+                                      targetYield:widget.targetYield,
+                                      targetData: widget.targetData,
+                                      yieldSupply: widget.yieldSupply,
+                                      province: widget.province,
+                                      variety: widget.variety,
+                                      area: widget.area,
+                                      fertilizerCombination: widget.fertilizerCombination,
+                                      prices: widget.prices,
+                                    )
+                                ),
+                              );
+                            },
+                          ),
+                          FlatButton(
+                            child: Text("No"),
+                            onPressed:  () {
+                              Navigator.of(context).pop();
+                            },
+                          ),
+                        ],
+                      );
+                    },
+                  );
                 },
                 child: Icon(
                     Icons.read_more

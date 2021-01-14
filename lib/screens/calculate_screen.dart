@@ -703,9 +703,27 @@ class _CalculateScreenState extends State<CalculateScreen> {
                         print(econData);
                         print(targetData);
 
+                        prices = {
+                          'n': await getCost(widget.fertilizerCombination[0]),
+                          'p': await getCost(widget.fertilizerCombination[1]),
+                          'k': await getCost(widget.fertilizerCombination[2])
+                        };
+
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => SSNMRatesScreen(targetData:targetData,econData:econData,area:widget.area,fertilizerCombination:widget.fertilizerCombination,prices:prices)),
+                        MaterialPageRoute(builder: (context) =>
+                            SSNMRatesScreen(
+                                targetData:targetData,
+                                econData:econData,
+                                area:widget.area,
+                                fertilizerCombination:widget.fertilizerCombination,
+                                prices:prices,
+                                targetYield: widget.targetYield,
+                                yieldSupply: yieldSupply,
+                                province: widget.province,
+                                variety: widget.variety,
+                            )
+                        ),
                       );
                       }
                     },
