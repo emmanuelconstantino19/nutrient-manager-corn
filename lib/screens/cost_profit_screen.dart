@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:nutrient_manager_corn_new/screens/summary_screen.dart';
 
 //Start of constant values
 
@@ -423,26 +424,19 @@ class _CostProfitScreenState extends State<CostProfitScreen> {
                                 var frr2 = computeFRRWithArea(double.parse(_option2Controller.text));
                                 var frr3 = computeFRRWithArea(double.parse(_option3Controller.text));
 
-                                //computation of AMF for option 2 and 3
+                                //computation of AMF
+                                var amf1 = widget.targetData['amf'];
                                 var amf2 = computeAMF(frr2);
                                 var amf3 = computeAMF(frr3);
 
-                                print(amf2);
-                                print(amf3);
-                                var amf1 = widget.targetData['amf'];
-                                print(amf1);
+                                //get fertilizer cost and gross proft
                                 var total1 = computeFertilizerCost(amf1);
-                                print(total1);
                                 var total2 = computeFertilizerCost(amf2);
                                 var total3 = computeFertilizerCost(amf3);
-                                print(total2);
-                                print(total3);
                                 var grossprofit1 = widget.targetYield*1000*double.parse(_mcController.text);
-                                print(grossprofit1);
                                 var grossprofit2 = double.parse(_option2Controller.text)*1000*double.parse(_mcController.text);
-                                print(grossprofit2);
                                 var grossprofit3 = double.parse(_option3Controller.text)*1000*double.parse(_mcController.text);
-                                print(grossprofit3);
+
 
                                 option1['targetYield'] = widget.targetYield;
                                 option1['amf1'] = amf1[widget.fertilizerCombination[0]];
@@ -450,6 +444,20 @@ class _CostProfitScreenState extends State<CostProfitScreen> {
                                 option1['amf3'] = amf1[widget.fertilizerCombination[2]];
                                 option1['fertilizerCost'] = total1;
                                 option1['grossProfit'] = grossprofit1;
+
+                                option2['targetYield'] = double.parse(_option2Controller.text);
+                                option2['amf1'] = amf2[widget.fertilizerCombination[0]];
+                                option2['amf2'] = amf2[widget.fertilizerCombination[1]];
+                                option2['amf3'] = amf2[widget.fertilizerCombination[2]];
+                                option2['fertilizerCost'] = total2;
+                                option2['grossProfit'] = grossprofit2;
+
+                                option3['targetYield'] = double.parse(_option3Controller.text);
+                                option3['amf1'] = amf3[widget.fertilizerCombination[0]];
+                                option3['amf2'] = amf3[widget.fertilizerCombination[1]];
+                                option3['amf3'] = amf3[widget.fertilizerCombination[2]];
+                                option3['fertilizerCost'] = total3;
+                                option3['grossProfit'] = grossprofit3;
                                 showResults();
                               }
                             },
@@ -469,7 +477,7 @@ class _CostProfitScreenState extends State<CostProfitScreen> {
             visible: _isResultVisible,
             child: Padding(
                 padding: EdgeInsets.symmetric(horizontal:50,vertical:10),
-                child: Text('Instruction: tap on the row below that you want to use for the summary table', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold,color:Colors.grey[600]))
+                child: Text('Instructions: Compare the values below and select a target yield to use for the summary table', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold,color:Colors.grey[600]))
             ),
           ),
           Visibility(
@@ -500,9 +508,15 @@ class _CostProfitScreenState extends State<CostProfitScreen> {
                           ]),
                           DataRow(cells: [
                             DataCell(Text("${option2['targetYield']}")),
-                            DataCell(Text('${option2['amf1']}')),
-                            DataCell(Text('${option2['amf2']}')),
-                            DataCell(Text('${option2['amf3']}')),
+                            DataCell(Text('${formatter.format(option2['amf1'])}')),
+                            DataCell(Text('${formatter.format(option2['amf2'])}')),
+                            DataCell(Text('${formatter.format(option2['amf3'])}')),
+                          ]),
+                          DataRow(cells: [
+                            DataCell(Text("${option3['targetYield']}")),
+                            DataCell(Text('${formatter.format(option3['amf1'])}')),
+                            DataCell(Text('${formatter.format(option3['amf2'])}')),
+                            DataCell(Text('${formatter.format(option3['amf3'])}')),
                           ])
                         ],
                       ),
@@ -524,9 +538,86 @@ class _CostProfitScreenState extends State<CostProfitScreen> {
                           ]),
                           DataRow(cells: [
                             DataCell(Text("${option2['targetYield']}")),
-                            DataCell(Text('${option2['fertilizerCost']}')),
-                            DataCell(Text('${option2['grossProfit']}')),
-                          ])
+                            DataCell(Text('${formatter.format(option2['fertilizerCost'])}')),
+                            DataCell(Text('${formatter.format(option2['grossProfit'])}')),
+                          ]),
+                          DataRow(cells: [
+                            DataCell(Text("${option3['targetYield']}")),
+                            DataCell(Text('${formatter.format(option3['fertilizerCost'])}')),
+                            DataCell(Text('${formatter.format(option3['grossProfit'])}')),
+                          ]),
+                        ],
+                      ),
+                      Padding(
+                          padding: EdgeInsets.only(top:20,left:20,right:20),
+                          child: Text('Choose target yield to use', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold))
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          Expanded(
+                            child: Padding(
+                              padding: EdgeInsets.all(10),
+                              child: RaisedButton(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(30.0),
+                                  //side: BorderSide(color: Colors.lightGreen[700])
+                                ),
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (context) =>
+                                        SummaryScreen(fertilizerCost: option1['fertilizerCost'], grossProfit: option1['grossProfit'],)
+                                    ),
+                                  );
+                                },
+                                padding: const EdgeInsets.symmetric(vertical:10.0),
+                                child: Text('${option1['targetYield']}',style:TextStyle(fontSize:15)),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Padding(
+                              padding: EdgeInsets.all(10),
+                              child: RaisedButton(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(30.0),
+                                  //side: BorderSide(color: Colors.lightGreen[700])
+                                ),
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (context) =>
+                                        SummaryScreen(fertilizerCost: option2['fertilizerCost'], grossProfit: option2['grossProfit'],)
+                                    ),
+                                  );
+                                },
+                                padding: const EdgeInsets.symmetric(vertical:10.0),
+                                child: Text('${option2['targetYield']}',style:TextStyle(fontSize:15)),
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Padding(
+                              padding: EdgeInsets.all(10),
+                              child: RaisedButton(
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(30.0),
+                                  //side: BorderSide(color: Colors.lightGreen[700])
+                                ),
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (context) =>
+                                        SummaryScreen(fertilizerCost: option3['fertilizerCost'], grossProfit: option3['grossProfit'],)
+                                    ),
+                                  );
+                                },
+                                padding: const EdgeInsets.symmetric(vertical:10.0),
+                                child: Text('${option3['targetYield']}',style:TextStyle(fontSize:15)),
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ],
